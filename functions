@@ -34,6 +34,13 @@ service_create() {
   else
     echo "" > "$SERVICE_ROOT/ENV"
   fi
+  
+  if [[ -n $MONGO_CUSTOM_DOCKER_OPTS ]]; then
+    echo "$MONGO_CUSTOM_DOCKER_OPTS" | tr ';' "\n" > "$SERVICE_ROOT/DOCKER_OPTS"
+  else
+    echo "" > "$SERVICE_ROOT/DOCKER_OPTS"
+  fi
+ 
   service_create_container "$SERVICE"
 }
 
@@ -43,9 +50,10 @@ service_create_container() {
   local SERVICE_NAME="$(get_service_name "$SERVICE")"
   local ROOTPASSWORD="$(cat "$SERVICE_ROOT/ROOTPASSWORD")"
   local PASSWORD="$(cat "$SERVICE_ROOT/PASSWORD")"
+  local DOCKER_OPTS="$(cat "$SERVICE_ROOT/DOCKER_OPTS")"
 
   # shellcheck disable=SC2086
-  ID=$(docker run --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/data/db" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=mongo "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" mongod $MONGO_CONFIG_OPTIONS)
+  ID=$(docker run $DOCKER_OPTS --name "$SERVICE_NAME" -v "$SERVICE_ROOT/data:/data/db" --env-file="$SERVICE_ROOT/ENV" -d --restart always --label dokku=service --label dokku.service=mongo "$PLUGIN_IMAGE:$PLUGIN_IMAGE_VERSION" mongod $MONGO_CONFIG_OPTIONS)
   echo "$ID" > "$SERVICE_ROOT/ID"
 
   dokku_log_verbose_quiet "Waiting for container to be ready"
